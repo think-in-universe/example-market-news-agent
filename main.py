@@ -4,7 +4,13 @@ import json
 import requests
 import os
 from google import genai
-from google.genai.types import Tool, GenerateContentConfig, GoogleSearch
+from google.genai.types import (
+    Tool,
+    GenerateContentConfig,
+    GoogleSearch,
+    HarmCategory,
+    HarmBlockThreshold,
+)
 from google.genai import types
 
 # Get key from env
@@ -14,8 +20,8 @@ model_name = "gemini-2.5-flash-preview-05-20"
 
 safety_settings = [
     types.SafetySetting(
-        category="HARM_CATEGORY_DANGEROUS_CONTENT",
-        threshold="BLOCK_ONLY_HIGH",
+        category=HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+        threshold=HarmBlockThreshold.BLOCK_ONLY_HIGH,
     ),
 ]
 
@@ -42,7 +48,7 @@ def run_llm_inference(
     # print(
     #     f"   LLM Response: {response.text[:250]}..."
     # )  # Print a snippet of the response
-    return response.text
+    return response.text if response.text is not None else ""
 
 
 def run_llm_inference_with_grounding(
@@ -70,7 +76,7 @@ def run_llm_inference_with_grounding(
     # print(
     #     f"   LLM Response: {response.text[:250]}..."
     # )  # Print a snippet of the response
-    return response.text
+    return response.text if response.text is not None else ""
 
 
 def parse_json(json_output: str):
@@ -120,18 +126,22 @@ def get_companies(target_query: str) -> list:
 
 class SentimentAnalysisAgent:
     def __init__(self):
-        self.target_query = ""  # User's initial query (e.g., "US Semiconductor Market")
+        self.target_query = os.getenv(
+            "TARGET_QUERY"
+        )  # User's initial query (e.g., "US Semiconductor Market")
         self.tracked_companies = (
             []
         )  # List of dicts: [{'name': 'Nvidia', 'ticker': 'NVDA', 'news_sources': [], 'facts': [], 'recommendations': []}, ...]
         self.facts_history_limit_per_company = 30  # Max facts per company
 
     def get_target_query_and_companies(self):
-        """Asks the user for the target market/theme and identifies companies."""
-        while not self.target_query:
-            self.target_query = input(
-                "Enter the market, sector, or theme you are interested in (e.g., 'US Semiconductor Market', 'AI Chip Manufacturers'): "
+        """Identifies companies based on the target query from environment variable."""
+        if not self.target_query:
+            print("Error: TARGET_QUERY environment variable not set.")
+            print(
+                "Please set the TARGET_QUERY environment variable (e.g., export TARGET_QUERY='US Semiconductor Market') and rerun the agent."
             )
+            return False
 
         print(f"\n🔍 Identifying companies for target query: '{self.target_query}'...")
         companies_found = get_companies(self.target_query)
