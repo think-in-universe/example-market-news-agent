@@ -80,6 +80,17 @@ def run_llm_inference_with_grounding(
 
 
 def parse_json(json_output: str):
+    """
+    Parses a JSON string, specifically handling cases where the JSON is wrapped in markdown code blocks.
+
+    This function extracts the pure JSON content by removing markdown fencing (e.g.,  ... ).
+
+    Args:
+        json_output (str): The input string which may contain JSON data, potentially wrapped in markdown.
+
+    Returns:
+        str: The extracted JSON string, or the original string if no markdown fencing is found.
+    """
     # Parsing out the markdown fencing
     lines = json_output.splitlines()
     for i, line in enumerate(lines):
