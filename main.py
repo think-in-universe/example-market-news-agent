@@ -83,7 +83,7 @@ def parse_json(json_output: str):
     """
     Parses a JSON string, specifically handling cases where the JSON is wrapped in markdown code blocks.
 
-    This function extracts the pure JSON content by removing markdown fencing (e.g.,  ... ).
+    This function extracts the pure JSON content by removing markdown fencing (e.g., ```json ... ``` or ``` ... ```).
 
     Args:
         json_output (str): The input string which may contain JSON data, potentially wrapped in markdown.
@@ -93,16 +93,34 @@ def parse_json(json_output: str):
     """
     # Parsing out the markdown fencing
     lines = json_output.splitlines()
+    start_index = None
+    end_index = None
+    
+    # Look for opening fence (```json, ```JSON, or plain ```)
     for i, line in enumerate(lines):
-        if line == "```json":
-            json_output = "\n".join(
-                lines[i + 1 :]
-            )  # Remove everything before "```json"
-            json_output = json_output.split("```")[
-                0
-            ]  # Remove everything after the closing "```"
-            break  # Exit the loop once "```json" is found
-    return json_output
+        stripped_line = line.strip()
+        if stripped_line.startswith('```'):
+            start_index = i
+            break
+    
+    # If no opening fence found, return original
+    if start_index is None:
+        return json_output
+    
+    # Look for closing fence
+    for i, line in enumerate(lines[start_index + 1:], start_index + 1):
+        stripped_line = line.strip()
+        if stripped_line == '```':
+            end_index = i
+            break
+    
+    # If no closing fence found, return original
+    if end_index is None:
+        return json_output
+    
+    # Extract content between fences
+    json_content = '\n'.join(lines[start_index + 1:end_index])
+    return json_content
 
 
 def get_companies(target_query: str) -> list:
