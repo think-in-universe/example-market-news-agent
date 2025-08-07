@@ -84,6 +84,7 @@ def parse_json(json_output: str):
     Parses a JSON string, specifically handling cases where the JSON is wrapped in markdown code blocks.
 
     This function extracts the pure JSON content by removing markdown fencing (e.g., ```json ... ``` or ``` ... ```).
+    It's designed to be robust against variations in whitespace and the presence of the 'json' language specifier.
 
     Args:
         json_output (str): The input string which may contain JSON data, potentially wrapped in markdown.
@@ -91,36 +92,34 @@ def parse_json(json_output: str):
     Returns:
         str: The extracted JSON string, or the original string if no markdown fencing is found.
     """
-    # Parsing out the markdown fencing
-    lines = json_output.splitlines()
-    start_index = None
-    end_index = None
+    # Find the start and end of the code block
+    start_fence = json_output.find('```')
     
-    # Look for opening fence (```json, ```JSON, or plain ```)
-    for i, line in enumerate(lines):
-        stripped_line = line.strip()
-        if stripped_line.startswith('```'):
-            start_index = i
-            break
-    
-    # If no opening fence found, return original
-    if start_index is None:
+    # If no opening fence, return original string
+    if start_fence == -1:
         return json_output
-    
-    # Look for closing fence
-    for i, line in enumerate(lines[start_index + 1:], start_index + 1):
-        stripped_line = line.strip()
-        if stripped_line == '```':
-            end_index = i
-            break
-    
-    # If no closing fence found, return original
-    if end_index is None:
-        return json_output
-    
-    # Extract content between fences
-    json_content = '\n'.join(lines[start_index + 1:end_index])
-    return json_content
+
+    end_fence = json_output.rfind('```')
+
+    # If fences are the same, it could be an unclosed block
+    if start_fence == end_fence:
+        # Assume content is after the fence
+        content = json_output[start_fence + 3:]
+    else:
+        # Extract content between the fences
+        content = json_output[start_fence + 3:end_fence]
+
+    # Remove the 'json' language specifier and strip whitespace
+    # .strip() handles leading/trailing whitespace
+    # .lower() makes the 'json' check case-insensitive
+    # .lstrip() removes any whitespace between 'json' and the actual json
+    content_stripped = content.strip()
+    if content_stripped.lower().startswith('json'):
+        content = content_stripped[4:].lstrip()
+    else:
+        content = content_stripped
+
+    return content
 
 
 def get_companies(target_query: str) -> list:
